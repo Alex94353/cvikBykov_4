@@ -14,5 +14,7 @@ class DatabaseSeeder extends Seeder {
             NotesTableSeeder::class,
             NoteCategoryTableSeeder::class,
         ]);
+        $categories = Category::factory(10)->create();
+
     }
 }
