@@ -16,4 +16,8 @@ class Category extends Model
     {
         return self::where('name', $name)->first();
     }
+
+    public function notes() {
+        return $this->belongsToMany(Note::class, 'note_category');
+    }
 }

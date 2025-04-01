@@ -4,9 +4,10 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Validation\ValidationException;
 class CategoryController extends Controller
 {
-
+    
     public function index()
     {
         $categories = Category::orderBy('name')->get();
@@ -17,12 +18,30 @@ class CategoryController extends Controller
 
     public function store(Request $request)
     {
-        $category = Category::create([
-            'id' => $request->id,
-            'name' => $request->name
-        ]);
 
-        return response()->json($category, 201);
+        try {
+            $validated = $request->validate([
+                'name' => 'required|string|min:3|max:255|unique:categories,name',
+            ]);
+
+            $category = Category::create([
+                'name' => $validated['name'],
+            ]);
+
+            return response()->json(['message' => 'Kategória bola vytvorená', 'category' => $category]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => 'Chyba pri validácii kategórie',
+                'errors' => $e->errors(),
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Neočakávaná chyba pri vytváraní kategórie',
+                'error' => $e->getMessage(),
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+
+
     }
 
 
@@ -40,17 +59,34 @@ class CategoryController extends Controller
 
     public function update(Request $request, int $id)
     {
+        try {
+            $category = Category::find($id);
 
-        $category = Category::find($id);
+            if (!$category) {
+                return response()->json(['message' => 'Kategória nebola nájdená'], Response::HTTP_NOT_FOUND);
+            }
 
-        if (!$category) {
-            return response()->json(['message' => 'Kategória nebola nájdená'], Response::HTTP_NOT_FOUND);
+            $validated = $request->validate([
+                'name' => 'required|string|min:3|max:255|unique:categories,name,' . $id,
+            ]);
+
+            $category->name = $validated['name'];
+            $category->save();
+
+            return response()->json(['message' => 'Kategória bola aktualizovaná', 'category' => $category]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => 'Chyba pri validácii kategórie',
+                'errors' => $e->errors(),
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Neočakávaná chyba pri aktualizácii kategórie',
+                'error' => $e->getMessage(),
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
-        $category->name = $request->name;
-        $category->save();
 
-        return response()->json(['message' => 'Kategória bola aktualizovaná', 'category' => $category]);
     }
 
 
@@ -66,7 +102,7 @@ class CategoryController extends Controller
 
         return response()->json(['message' => 'Kategória bola vymazaná']);
     }
-      
+
     public function getByName(string $name)
     {
         $category = Category::getByName($name);
